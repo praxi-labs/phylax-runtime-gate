@@ -33,7 +33,12 @@ function normaliseDecision(verdict: unknown): GateDecision {
   if (value === 'warn') {
     return 'warn'
   }
-  return 'allow'
+  if (value === 'allow') {
+    return 'allow'
+  }
+  // An unrecognised verdict is treated as a block. A verdict added in a later
+  // API version must stop execution rather than pass through it.
+  return 'block'
 }
 
 export class RuntimeGate {
@@ -44,6 +49,7 @@ export class RuntimeGate {
   readonly #allowTtl: number
   readonly #denyTtl: number
   readonly #timeoutMs: number
+  readonly #unknownAs: GateDecision
   readonly #onDecision: ((result: GateResult) => void) | undefined
 
   constructor(options: RuntimeGateOptions) {
@@ -67,6 +73,7 @@ export class RuntimeGate {
     this.#allowTtl = options.allowCacheTtlMs ?? DEFAULT_ALLOW_TTL_MS
     this.#denyTtl = options.denyCacheTtlMs ?? DEFAULT_DENY_TTL_MS
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+    this.#unknownAs = options.unknownAs ?? 'allow'
     this.#onDecision = options.onDecision
   }
 
@@ -143,9 +150,20 @@ export class RuntimeGate {
         | string
         | undefined
 
+      // The network answers ALLOW with coverage "none" for anything it has not
+      // evaluated, rather than 404, so one unknown entry does not break a batch.
+      // That is the right transport answer and the wrong security answer for an
+      // organization that wants to run only what has been seen, so the decision
+      // for an uncovered artifact is the caller's to make.
+      const uncovered = data['coverage'] === 'none'
+
       return {
-        decision: normaliseDecision(data['verdict']),
-        reason: String(data['reason'] ?? data['verdict'] ?? 'evaluated'),
+        decision: uncovered
+          ? this.#unknownAs
+          : normaliseDecision(data['verdict']),
+        reason: uncovered
+          ? 'This artifact has not been evaluated by the network'
+          : String(data['reason'] ?? data['verdict'] ?? 'evaluated'),
         riskScore:
           typeof data['risk_score'] === 'number'
             ? (data['risk_score'] as number)

@@ -28,6 +28,16 @@ export interface RuntimeGateOptions {
   baseUrl?: string | undefined
   policy?: string | undefined
   failMode?: FailMode | undefined
+  /**
+   * What to do with an artifact the network has never evaluated.
+   *
+   * The API answers ALLOW with `coverage: "none"` for anything uncovered,
+   * because a 404 would break a batch call and warning on everything unseen
+   * trains people to ignore warnings. That is the right transport answer and
+   * the wrong security answer for an organization that wants to run only what
+   * has been evaluated. Defaults to `allow`; set `block` to fail closed.
+   */
+  unknownAs?: GateDecision | undefined
   allowCacheTtlMs?: number | undefined
   denyCacheTtlMs?: number | undefined
   cacheMaxEntries?: number | undefined
