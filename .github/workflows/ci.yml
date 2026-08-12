@@ -20,6 +20,7 @@ jobs:
     if: github.event_name != 'schedule'
     uses: praxi-labs/ci/.github/workflows/node.yml@v1
     with:
+      link-workspace-package: phylax-sdk-js
       ignore-scripts: true
     permissions:
       contents: read
