@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build
+    if: github.event_name != 'schedule'
+    uses: praxi-labs/ci/.github/workflows/node.yml@v1
+    with:
+      ignore-scripts: true
+    permissions:
+      contents: read
+
+  workflows:
+    name: Workflows
+    if: github.event_name != 'schedule'
+    uses: praxi-labs/ci/.github/workflows/workflow-lint.yml@v1
+    permissions:
+      contents: read
+      security-events: write
+
+  codeql:
+    name: CodeQL
+    if: github.event_name != 'schedule'
+    uses: praxi-labs/ci/.github/workflows/codeql.yml@v1
+    with:
+      languages: '["javascript-typescript"]'
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+
+  dependencies:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    uses: praxi-labs/ci/.github/workflows/dependency-review.yml@v1
+    permissions:
+      contents: read
+      pull-requests: write
+
+  advisories:
+    name: Advisories
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    uses: praxi-labs/ci/.github/workflows/audit.yml@v1
+    with:
+      ecosystem: npm
+    permissions:
+      contents: read

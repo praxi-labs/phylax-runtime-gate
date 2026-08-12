@@ -1,0 +1,15 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Publish
+    uses: praxi-labs/ci/.github/workflows/npm-publish.yml@v1
+    permissions:
+      contents: read
+      id-token: write
