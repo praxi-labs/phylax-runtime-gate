@@ -1,0 +1,16 @@
+name: Tag
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  tag:
+    name: Tag
+    uses: praxi-labs/ci/.github/workflows/auto-tag.yml@v1
+    with:
+      version-path: package.json
+    permissions:
+      contents: write
