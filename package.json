@@ -1,5 +1,5 @@
 {
-  "name": "@phylax/runtime-gate",
+  "name": "@phyi/runtime-gate",
   "version": "0.1.0",
   "description": "Check tools, packages and actions against policy before an AI agent executes them.",
   "license": "MIT",
@@ -35,7 +35,7 @@
     "supply-chain"
   ],
   "dependencies": {
-    "@phylax/sdk": "file:../phylax-sdk-js"
+    "@phyi/sdk": "file:../phylax-sdk-js"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

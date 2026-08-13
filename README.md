@@ -1,13 +1,13 @@
-# @phylax/runtime-gate
+# @phyi/runtime-gate
 
 Check tools, packages and actions against policy before an AI agent executes them.
 
-An agent's tool set is not fixed at build time. It discovers tools while it works, and a tool description is read as trusted context by the model. `@phylax/runtime-gate` sits between your agent and its tools, verifies what is about to run, and refuses anything your policy blocks. It catches three things a build time check cannot: a tool published after your last build, a definition that changed after it was approved, and arguments that violate policy even when the tool itself is allowed.
+An agent's tool set is not fixed at build time. It discovers tools while it works, and a tool description is read as trusted context by the model. `@phyi/runtime-gate` sits between your agent and its tools, verifies what is about to run, and refuses anything your policy blocks. It catches three things a build time check cannot: a tool published after your last build, a definition that changed after it was approved, and arguments that violate policy even when the tool itself is allowed.
 
 ## Install
 
 ```sh
-npm install @phylax/runtime-gate
+npm install @phyi/runtime-gate
 ```
 
 ## Usage
@@ -16,7 +16,7 @@ npm install @phylax/runtime-gate
 <summary><b>Quickstart</b>: wrap a tool call so a blocked artifact never executes</summary>
 
 ```typescript
-import { RuntimeGate } from '@phylax/runtime-gate'
+import { RuntimeGate } from '@phyi/runtime-gate'
 
 const gate = new RuntimeGate({
   apiKey: process.env.PHYLAX_API_KEY,

@@ -1,5 +1,5 @@
-import { PhylaxSdk } from '@phylax/sdk'
-import type { PhylaxResult, VerificationResult } from '@phylax/sdk'
+import { PhylaxSdk } from '@phyi/sdk'
+import type { PhylaxResult, VerificationResult } from '@phyi/sdk'
 
 import { TtlCache } from './cache.js'
 import { GateBlockedError } from './types.js'
@@ -63,7 +63,7 @@ export class RuntimeGate {
       apiToken: options.apiKey,
       baseUrl: options.baseUrl,
       timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      userAgent: '@phylax/runtime-gate/0.1.0',
+      userAgent: '@phyi/runtime-gate/0.1.0',
       fetch: options.fetch,
     })
 
