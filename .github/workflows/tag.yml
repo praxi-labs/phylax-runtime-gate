@@ -14,3 +14,12 @@ jobs:
       version-path: package.json
     permissions:
       contents: write
+
+  publish:
+    name: Publish
+    needs: tag
+    if: needs.tag.outputs.tagged == 'true'
+    uses: praxi-labs/ci/.github/workflows/npm-publish.yml@v1
+    permissions:
+      contents: read
+      id-token: write
