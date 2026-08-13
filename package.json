@@ -35,7 +35,7 @@
     "supply-chain"
   ],
   "dependencies": {
-    "@phyi/sdk": "file:../phylax-sdk-js"
+    "@phyi/sdk": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

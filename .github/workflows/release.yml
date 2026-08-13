@@ -10,8 +10,6 @@ jobs:
   publish:
     name: Publish
     uses: praxi-labs/ci/.github/workflows/npm-publish.yml@v1
-    with:
-      sibling-package: phylax-sdk-js
     permissions:
       contents: read
       id-token: write
