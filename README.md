@@ -1,5 +1,7 @@
 # @phyi/runtime-gate
 
+[![npm](https://img.shields.io/npm/v/@phyi/runtime-gate?label=npm&color=CB3837)](https://www.npmjs.com/package/@phyi/runtime-gate)
+
 Check tools, packages and actions against policy before an AI agent executes them.
 
 An agent's tool set is not fixed at build time. It discovers tools while it works, and a tool description is read as trusted context by the model. `@phyi/runtime-gate` sits between your agent and its tools, verifies what is about to run, and refuses anything your policy blocks. It catches three things a build time check cannot: a tool published after your last build, a definition that changed after it was approved, and arguments that violate policy even when the tool itself is allowed.
@@ -116,3 +118,17 @@ Await only before side effects, and keep the timeout aligned with your fail mode
 ## License
 
 MIT
+
+## The rest of Phylax
+
+| Tool | Where to get it |
+| --- | --- |
+| JavaScript SDK | [`@phyi/sdk`](https://www.npmjs.com/package/@phyi/sdk) on npm |
+| Python SDK | [`phylax-sdk`](https://github.com/praxi-labs/phylax-sdk-python), PyPI release pending |
+| MCP server | [`@phyi/mcp`](https://www.npmjs.com/package/@phyi/mcp) on npm |
+| Agent runtime gate | [`@phyi/runtime-gate`](https://www.npmjs.com/package/@phyi/runtime-gate) on npm |
+| VS Code extension | [`phylax.phylax`](https://marketplace.visualstudio.com/items?itemName=phylax.phylax) on the Marketplace |
+| GitHub Action | [`praxi-labs/phylax-action`](https://github.com/praxi-labs/phylax-action) |
+| Browser extension | [`praxi-labs/phylax-chrome`](https://github.com/praxi-labs/phylax-chrome/releases/latest), Web Store listing pending |
+
+Docs live at [phyi.dev](https://phyi.dev).
