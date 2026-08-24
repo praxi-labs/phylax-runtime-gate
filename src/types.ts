@@ -18,6 +18,16 @@ export interface CheckInput {
   tool: string | { name?: string; artifact?: string; [key: string]: unknown }
   input?: unknown
   artifact?: string | undefined
+  /**
+   * The tool's own source, as relative path to contents.
+   *
+   * Supplying this turns the check into an analysis rather than a lookup. The
+   * champions promoted for that track execute the code and return a verdict,
+   * so a tool the network has never seen is judged on what it does instead of
+   * falling to `unknownAs`. This is the case a runtime gate exists for: the
+   * tool worth stopping is rarely one that has already been attested.
+   */
+  files?: Record<string, string> | undefined
   policy?: string | undefined
   failMode?: FailMode | undefined
   signal?: AbortSignal | undefined
@@ -38,6 +48,14 @@ export interface RuntimeGateOptions {
    * has been evaluated. Defaults to `allow`; set `block` to fail closed.
    */
   unknownAs?: GateDecision | undefined
+  /**
+   * Refuse to allow when only the static scanner reached an analysed tool.
+   *
+   * A verdict backed by champion agents and one from a regex pass are
+   * indistinguishable if you read the verdict alone. A gate that cares about
+   * the difference sets this; it applies to analysis, not to lookups.
+   */
+  requireChampions?: boolean | undefined
   allowCacheTtlMs?: number | undefined
   denyCacheTtlMs?: number | undefined
   cacheMaxEntries?: number | undefined

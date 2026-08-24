@@ -1,5 +1,5 @@
 import { PhylaxSdk } from '@phyi/sdk'
-import type { PhylaxResult, VerificationResult } from '@phyi/sdk'
+import type { AnalysisResult, PhylaxResult, VerificationResult } from '@phyi/sdk'
 
 import { TtlCache } from './cache.js'
 import { GateBlockedError } from './types.js'
@@ -23,6 +23,24 @@ function resolveArtifact(input: CheckInput): string {
     return input.tool
   }
   return String(input.tool?.artifact ?? input.tool?.name ?? '')
+}
+
+/**
+ * A stable key for a set of files, so an analysis is cached by what the tool
+ * actually contains rather than by the name it happens to go by. A tool that
+ * changes on disk must not keep an old allow.
+ */
+function digestFiles(files: Record<string, string>): string {
+  let hash = 0x811c9dc5
+  for (const name of Object.keys(files).sort()) {
+    for (const chunk of [name, files[name] ?? '']) {
+      for (let i = 0; i < chunk.length; i += 1) {
+        hash ^= chunk.charCodeAt(i)
+        hash = Math.imul(hash, 0x01000193) >>> 0
+      }
+    }
+  }
+  return hash.toString(16).padStart(8, '0')
 }
 
 function normaliseDecision(verdict: unknown): GateDecision {
@@ -50,6 +68,7 @@ export class RuntimeGate {
   readonly #denyTtl: number
   readonly #timeoutMs: number
   readonly #unknownAs: GateDecision
+  readonly #requireChampions: boolean
   readonly #onDecision: ((result: GateResult) => void) | undefined
 
   constructor(options: RuntimeGateOptions) {
@@ -74,6 +93,7 @@ export class RuntimeGate {
     this.#denyTtl = options.denyCacheTtlMs ?? DEFAULT_DENY_TTL_MS
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
     this.#unknownAs = options.unknownAs ?? 'allow'
+    this.#requireChampions = options.requireChampions ?? false
     this.#onDecision = options.onDecision
   }
 
@@ -90,19 +110,36 @@ export class RuntimeGate {
     }
 
     const policy = input.policy ?? this.#policy
-    const key = `${artifact}::${policy ?? 'default'}`
+    const files = input.files
+    const key = files
+      ? `${artifact}::${policy ?? 'default'}::${digestFiles(files)}`
+      : `${artifact}::${policy ?? 'default'}`
 
     const cached = this.#cache.get(key)
     if (cached) {
       return this.#emit({ ...cached, cached: true })
     }
 
-    const result = await this.#sdk.artifacts.verify(artifact, {
-      ...(policy ? { policy } : {}),
-      ...(input.signal ? { signal: input.signal } : {}),
-    })
-
-    const gateResult = this.#toGateResult(artifact, result, input.failMode)
+    // With the tool's own source in hand there is nothing to look up. Analysing
+    // it answers the question the gate is actually asking, which is what this
+    // code does, rather than whether anyone has said anything about its name.
+    const gateResult = files
+      ? this.#toAnalysisResult(
+          artifact,
+          await this.#sdk.artifacts.analyse(files, {
+            ...(input.signal ? { signal: input.signal } : {}),
+            coordinate: artifact || undefined,
+          }),
+          input.failMode,
+        )
+      : this.#toGateResult(
+          artifact,
+          await this.#sdk.artifacts.verify(artifact, {
+            ...(policy ? { policy } : {}),
+            ...(input.signal ? { signal: input.signal } : {}),
+          }),
+          input.failMode,
+        )
 
     if (!gateResult.degraded) {
       this.#cache.set(
@@ -134,6 +171,51 @@ export class RuntimeGate {
 
   clearCache(): void {
     this.#cache.clear()
+  }
+
+  #toAnalysisResult(
+    artifact: string,
+    result: PhylaxResult<AnalysisResult>,
+    overrideFailMode: FailMode | undefined,
+  ): GateResult {
+    const timestamp = new Date().toISOString()
+
+    if (!result.success) {
+      return this.#degraded(artifact, result, overrideFailMode, timestamp)
+    }
+
+    const data = result.data
+    const analysers = data.engine?.analysers ?? 0
+    const decision = normaliseDecision(data.verdict)
+
+    // An analysis that only the static scanner reached is a weaker claim than a
+    // gate may be willing to act on, and the verdict alone does not show it.
+    if (this.#requireChampions && analysers === 0 && decision === 'allow') {
+      return {
+        decision: 'block',
+        reason:
+          'No champion agents analysed this tool, so the verdict rests on the '
+          + 'static scanner alone and requireChampions is set',
+        artifact,
+        timestamp,
+        cached: false,
+        degraded: false,
+      }
+    }
+
+    const reasons = Array.isArray(data.reasons) ? data.reasons : []
+
+    return {
+      decision,
+      reason:
+        reasons[0]
+        ?? `${String(data.verdict)} from ${analysers} analyser(s) (coverage ${String(data.coverage)})`,
+      riskScore: typeof data['risk_score'] === 'number' ? data['risk_score'] : undefined,
+      artifact,
+      timestamp,
+      cached: false,
+      degraded: false,
+    }
   }
 
   #toGateResult(
@@ -188,6 +270,33 @@ export class RuntimeGate {
 
     const failMode = overrideFailMode ?? this.#failMode
 
+    return {
+      decision: failMode === 'open' ? 'allow' : 'block',
+      reason:
+        failMode === 'open'
+          ? `Phylax unreachable (${result.code}), failing open: ${result.error}`
+          : `Phylax unreachable (${result.code}), failing closed: ${result.error}`,
+      artifact,
+      timestamp,
+      cached: false,
+      degraded: true,
+    }
+  }
+
+  /**
+   * What to do when Phylax could not be reached at all.
+   *
+   * Shared by the lookup and the analysis paths so an outage produces the same
+   * decision either way. `degraded` is set so a caller can tell "we checked and
+   * it is fine" from "we could not check".
+   */
+  #degraded(
+    artifact: string,
+    result: { code: string; error: string },
+    overrideFailMode: FailMode | undefined,
+    timestamp: string,
+  ): GateResult {
+    const failMode = overrideFailMode ?? this.#failMode
     return {
       decision: failMode === 'open' ? 'allow' : 'block',
       reason:
